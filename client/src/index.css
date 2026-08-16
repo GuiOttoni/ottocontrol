@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --bg-deep: #0a0612;
+  --bg-primary: #0d0817;
+  --bg-secondary: #120b1f;
+  --bg-card: #180f28;
+  --bg-card-hover: #21132f;
+
+  --border: #2a1a3d;
+  --border-bright: #452a5c;
+  --border-glow: #6b3f94;
+
+  --text-primary: #d9c2f0;
+  --text-secondary: #8f6bb0;
+  --text-tertiary: #5c4278;
+
+  --accent: #a855f7;
+  --accent-dim: #7e22ce;
+  --accent-glow: rgba(168, 85, 247, 0.15);
+
+  --gold: #ffb000;
+  --gold-dim: #cc8800;
+  --gold-glow: rgba(255, 176, 0, 0.15);
+
+  --font-mono: "JetBrains Mono", "Consolas", "Courier New", monospace;
+}
+
+@theme {
+  --color-bg-deep: var(--bg-deep);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-card: var(--bg-card);
+  --color-bg-card-hover: var(--bg-card-hover);
+
+  --color-border: var(--border);
+  --color-border-bright: var(--border-bright);
+  --color-border-glow: var(--border-glow);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-glow: var(--accent-glow);
+
+  --color-gold: var(--gold);
+  --color-gold-dim: var(--gold-dim);
+  --color-gold-glow: var(--gold-glow);
+
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-mono);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+}
+
+code {
+  font-family: var(--font-mono);
+  color: var(--gold);
+}
+
+.app-grid-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(168, 85, 247, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 0%, black 30%, transparent 100%);
+}

@@ -1,0 +1,39 @@
+{
+  "name": "ottocontrol",
+  "version": "0.1.0",
+  "description": "Central de controle local para desenvolvedores — instruções de agentes IA, projetos, sessões e monitor de recursos, tudo em um dashboard local.",
+  "keywords": ["cli", "developer-tools", "ai-agents", "claude", "copilot", "gemini", "dashboard", "devtools"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GuiOttoni/ottocontrol.git",
+    "directory": "package"
+  },
+  "homepage": "https://github.com/GuiOttoni/ottocontrol#readme",
+  "bugs": {
+    "url": "https://github.com/GuiOttoni/ottocontrol/issues"
+  },
+  "type": "module",
+  "bin": {
+    "ottocontrol": "./cli/index.js"
+  },
+  "files": [
+    "cli/",
+    "dist/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "open": "^10.1.2",
+    "ora": "^8.2.0"
+  }
+}

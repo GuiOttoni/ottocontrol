@@ -1,0 +1,5 @@
+# The `files` array in package.json handles inclusion; this file just
+# stops npm from falling back to the root .gitignore (which ignores dist/).
+build.mjs
+*.bat
+node_modules/
