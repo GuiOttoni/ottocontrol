@@ -1,3 +1,15 @@
+// node-pty has a known race on Windows (its ConPTY kill() path can throw
+// `Cannot read properties of undefined (reading 'forEach')` from an
+// internal, unhandled promise when a terminal is closed quickly) that
+// would otherwise take the whole app down with it. A crash here must
+// never cost the rest of ottocontrol — log and keep serving.
+process.on("unhandledRejection", (reason) => {
+  console.error("[ottocontrol] unhandled rejection (ignorada):", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[ottocontrol] uncaught exception (ignorada):", err);
+});
+
 import express from "express";
 import cors from "cors";
 import fs from "node:fs";
@@ -9,6 +21,7 @@ import sessionsRouter from "./routes/sessions.js";
 import settingsRouter from "./routes/settings.js";
 import resourcesRouter from "./routes/resources.js";
 import { TOOLS } from "./lib/tools.js";
+import { attachTerminalServer } from "./lib/terminal-server.js";
 
 const app = express();
 app.use(cors());
@@ -34,4 +47,5 @@ if (fs.existsSync(path.join(clientDist, "index.html"))) {
 }
 
 const PORT = process.env.PORT || 4310;
-app.listen(PORT, () => console.log(`ottocontrol server on http://localhost:${PORT}`));
+const httpServer = app.listen(PORT, () => console.log(`ottocontrol server on http://localhost:${PORT}`));
+attachTerminalServer(httpServer);

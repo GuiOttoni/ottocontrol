@@ -16,6 +16,7 @@ async function parseSession(filePath) {
   let firstTs = null;
   let lastTs = null;
   let messageCount = 0;
+  let cwd = null;
   const models = new Set();
   const usage = {
     input_tokens: 0,
@@ -37,6 +38,7 @@ async function parseSession(filePath) {
       if (!firstTs) firstTs = event.timestamp;
       lastTs = event.timestamp;
     }
+    if (!cwd && event.cwd) cwd = event.cwd;
     if (event.type === "assistant" || event.type === "user") messageCount++;
 
     const u = event.message?.usage;
@@ -54,6 +56,7 @@ async function parseSession(filePath) {
     firstTs,
     lastTs,
     messageCount,
+    cwd,
     models: [...models],
     usage,
   };

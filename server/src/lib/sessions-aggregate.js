@@ -7,7 +7,7 @@ function adaptClaude(sessions) {
     id: s.id,
     provider: "claude",
     project: s.project,
-    projectPath: null,
+    projectPath: s.cwd ?? null,
     firstTs: s.firstTs,
     lastTs: s.lastTs,
     messageCount: s.messageCount,

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Info } from "lucide-react";
+import { Search, Info, TerminalSquare } from "lucide-react";
 import { api } from "../lib/api";
 import type { SessionProvider, UnifiedSession, UnsupportedSessionSource, SessionDetail } from "../lib/api";
 import Modal from "../components/Modal";
+import TerminalModal from "../components/TerminalModal";
+
+const RESUMABLE: Record<SessionProvider, boolean> = { claude: true, copilot: true, gemini: true };
 
 const KIND_LABEL: Record<string, string> = {
   text: "",
@@ -26,6 +29,7 @@ export default function SessionsPage() {
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<UnifiedSession | null>(null);
+  const [resuming, setResuming] = useState<UnifiedSession | null>(null);
   const [showUnsupported, setShowUnsupported] = useState(false);
 
   useEffect(() => {
@@ -174,7 +178,28 @@ export default function SessionsPage() {
         </table>
       )}
 
-      {selected && <SessionDetailModal session={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <SessionDetailModal
+          session={selected}
+          onClose={() => setSelected(null)}
+          onResume={(s) => {
+            setSelected(null);
+            setResuming(s);
+          }}
+        />
+      )}
+
+      {resuming && (
+        <TerminalModal
+          open
+          onClose={() => setResuming(null)}
+          title={`Retomar — ${PROVIDER_META[resuming.provider].label}`}
+          subtitle={resuming.project}
+          provider={resuming.provider}
+          sessionId={resuming.id}
+          cwd={resuming.projectPath}
+        />
+      )}
 
       <Modal
         open={showUnsupported}
@@ -199,7 +224,15 @@ export default function SessionsPage() {
   );
 }
 
-function SessionDetailModal({ session, onClose }: { session: UnifiedSession; onClose: () => void }) {
+function SessionDetailModal({
+  session,
+  onClose,
+  onResume,
+}: {
+  session: UnifiedSession;
+  onClose: () => void;
+  onResume: (session: UnifiedSession) => void;
+}) {
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [query, setQuery] = useState("");
 
@@ -224,6 +257,15 @@ function SessionDetailModal({ session, onClose }: { session: UnifiedSession; onC
       widthClass="max-w-4xl"
     >
       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-bg-card px-5 py-3">
+        {RESUMABLE[session.provider] && (
+          <button
+            onClick={() => onResume(session)}
+            title="Abre um terminal real retomando esta sessão na CLI original"
+            className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-accent-dim bg-accent-glow px-2.5 py-1.5 text-xs font-medium text-accent transition-all hover:-translate-y-px hover:shadow-[0_0_12px_var(--accent-glow)]"
+          >
+            <TerminalSquare size={13} /> Retomar sessão
+          </button>
+        )}
         <Search size={15} className="shrink-0 text-text-tertiary" />
         <input
           autoFocus

@@ -7,7 +7,7 @@ Roda 100% local — sem enviar nada para fora da sua máquina — e reúne num �
 ## O que ele faz
 
 - **Instruções** — mantém `AGENTS.md` como fonte canônica por projeto e sincroniza o conteúdo para o formato nativo de cada ferramenta (`CLAUDE.md`, `.cursor/rules/`, `.github/copilot-instructions.md`, `.windsurfrules`, `CONVENTIONS.md`, `GEMINI.md`), com proteção contra sobrescrever conteúdo que já existia. Também edita as instruções **globais** (pasta do usuário) de cada agente — `CLAUDE.md`, `settings.json`, `.claude.json`, `copilot-instructions.md`, `mcp-config.json` e outras — com link direto pra documentação oficial de cada um.
-- **Sessões** — histórico unificado e pesquisável de sessões do Claude Code, GitHub Copilot CLI e Gemini CLI/Antigravity, lido diretamente dos arquivos locais de cada ferramenta.
+- **Sessões** — histórico unificado e pesquisável de sessões do Claude Code, GitHub Copilot CLI e Gemini CLI/Antigravity, lido diretamente dos arquivos locais de cada ferramenta. Cada sessão pode ser **retomada num terminal de verdade** (xterm.js + PTY nativo via WebSocket), rodando `--resume` na CLI original sem sair do dashboard.
 - **Tokens/Custos** — consumo de tokens do Claude Code agregado por dia.
 - **Projetos** — escaneia recursivamente sua pasta de projetos, identifica automaticamente se cada um é frontend/backend/fullstack/infra, mostra branch e remote do git, árvore de arquivos, README, e tem botões para abrir o projeto no VS Code ou num terminal.
 - **Monitor de Recursos** — quanto de memória e CPU o próprio ottocontrol, as sessões de agentes IA (Claude/Copilot/Gemini), outros processos Node/npm, .NET, Java, Python e containers Docker estão consumindo na máquina.
