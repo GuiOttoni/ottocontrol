@@ -1,61 +1,66 @@
 # ottocontrol
 
-Central de controle local para desenvolvedores que trabalham com múltiplos agentes de IA (Claude Code, GitHub Copilot, Gemini CLI/Antigravity, Cursor, Windsurf, Aider) e múltiplos projetos ao mesmo tempo.
+*[Leia em português](README-BR.md)*
 
-Roda 100% local — sem enviar nada para fora da sua máquina — e reúne num único dashboard o que hoje fica espalhado entre pastas de configuração, terminais e editores diferentes.
+A local control center for developers juggling multiple AI coding agents (Claude Code, GitHub Copilot, Gemini CLI/Antigravity, Cursor, Windsurf, Aider) across multiple projects at once.
 
-## O que ele faz
+Runs 100% locally — nothing ever leaves your machine — and pulls into one dashboard what's normally scattered across config folders, terminals, and different editors.
 
-- **Instruções** — mantém `AGENTS.md` como fonte canônica por projeto e sincroniza o conteúdo para o formato nativo de cada ferramenta (`CLAUDE.md`, `.cursor/rules/`, `.github/copilot-instructions.md`, `.windsurfrules`, `CONVENTIONS.md`, `GEMINI.md`), com proteção contra sobrescrever conteúdo que já existia. Também edita as instruções **globais** (pasta do usuário) de cada agente — `CLAUDE.md`, `settings.json`, `.claude.json`, `copilot-instructions.md`, `mcp-config.json` e outras — com link direto pra documentação oficial de cada um.
-- **Sessões** — histórico unificado e pesquisável de sessões do Claude Code, GitHub Copilot CLI e Gemini CLI/Antigravity, lido diretamente dos arquivos locais de cada ferramenta. Cada sessão pode ser **retomada num terminal de verdade** (xterm.js + PTY nativo via WebSocket), rodando `--resume` na CLI original sem sair do dashboard.
-- **Tokens/Custos** — consumo de tokens do Claude Code agregado por dia.
-- **Projetos** — escaneia recursivamente sua pasta de projetos, identifica automaticamente se cada um é frontend/backend/fullstack/infra, mostra branch e remote do git, árvore de arquivos, README, e tem botões para abrir o projeto no VS Code ou num terminal.
-- **Monitor de Recursos** — quanto de memória e CPU o próprio ottocontrol, as sessões de agentes IA (Claude/Copilot/Gemini), outros processos Node/npm, .NET, Java, Python e containers Docker estão consumindo na máquina.
-- **Configurações** — pasta de projetos, pasta do usuário e pasta de cada agente, tudo persistido em `~/.ottocontrol/config.json`.
+## What it does
 
-## Instalação
+- **Instructions** — keeps `AGENTS.md` as the canonical source per project and syncs its content into each tool's native format (`CLAUDE.md`, `.cursor/rules/`, `.github/copilot-instructions.md`, `.windsurfrules`, `CONVENTIONS.md`, `GEMINI.md`), with protection against overwriting content that was already there. Also edits each agent's **global** (user-folder) instructions — `CLAUDE.md`, `settings.json`, `.claude.json`, `copilot-instructions.md`, `mcp-config.json`, and more — with a direct link to each one's official docs.
+- **Sessions** — unified, searchable session history across Claude Code, GitHub Copilot CLI, and Gemini CLI/Antigravity, read straight from each tool's local files. Any session can be **resumed in a real terminal** (xterm.js + a native PTY over WebSocket), running `--resume` on the original CLI without leaving the dashboard.
+- **Tokens/Costs** — Claude Code token usage aggregated by day.
+- **Projects** — recursively scans your projects folder, auto-detects whether each one is frontend/backend/fullstack/infra, shows the git branch and remote, a file tree, the README, and buttons to open the project in VS Code or a terminal.
+- **Resource Monitor** — how much memory and CPU ottocontrol itself, AI agent sessions (Claude/Copilot/Gemini), other Node/npm processes, .NET, Java, Python, and Docker containers are using on the machine.
+- **Settings** — projects folder, home folder, and per-agent folders, all persisted in `~/.ottocontrol/config.json`.
+
+## Install
 
 ```bash
 npm install -g ottocontrol
 ```
 
-## Uso básico
+## Basic usage
 
 ```bash
-ottocontrol up       # inicia o dashboard e abre no navegador
-ottocontrol status    # mostra se está rodando e em qual porta
-ottocontrol down      # para o dashboard
+ottocontrol up       # starts the dashboard and opens it in your browser
+ottocontrol status    # shows whether it's running and on which port
+ottocontrol down      # stops the dashboard
 ```
 
-Por padrão sobe em `http://localhost:4310`. Pra usar outra porta:
+Defaults to `http://localhost:4310`. To use a different port:
 
 ```bash
 ottocontrol up --port 4400
 ```
 
-Configurações (pasta de projetos, pastas por agente etc.) ficam em `~/.ottocontrol/config.json` e podem ser editadas pela própria aba **Configurações** do dashboard.
+Settings (projects folder, per-agent folders, etc.) live in `~/.ottocontrol/config.json` and can be edited right from the dashboard's **Settings** tab.
 
-## Desenvolvimento local
+## Local development
 
-Este repositório é um monorepo simples: `server/` (Express) + `client/` (Vite + React + Tailwind) + `package/` (empacotamento do CLI publicado no npm).
+This repo is a simple monorepo: `server/` (Express) + `client/` (Vite + React + Tailwind) + `package/` (the npm-published CLI packaging).
 
 ```bash
-npm install       # na raiz, instala as deps do orquestrador (concurrently)
-npm run dev        # sobe server (:4310) + client (:5173) juntos, com hot-reload
+npm install       # at the root, installs the orchestrator's deps (concurrently)
+npm run dev        # brings up server (:4310) + client (:5173) together, with hot-reload
 ```
 
-## Publicar uma nova versão no npm
+## Publishing a new version to npm
+
+Publishing is automatic: creating a **GitHub release** triggers `.github/workflows/publish.yml`, which syncs the package version to the release tag, builds, and publishes via **npm Trusted Publishing (OIDC)** — no token/secret required.
+
+To build and test locally before cutting a release:
 
 ```bash
 cd package
-npm run build              # gera package/dist/ (copia o server + builda o client)
-npm install -g .           # opcional: testa a instalação global local antes de publicar
-npm publish --access public
+npm run build              # generates package/dist/ (copies the server + builds the client)
+npm install -g .           # optional: test the global local install
 ```
 
-Ou usando o helper (Windows): `package\publish.bat [build|local|publish]`.
+Or with the helper script (Windows): `package\publish.bat [build|local|publish]`.
 
 ## Roadmap
 
-- Suporte a leitura de histórico de sessões do Cursor e Windsurf (hoje ficam em bancos SQLite internos do editor, sem formato documentado).
-- Página de apresentação em [ottosite](https://github.com/GuiOttoni/ottosite).
+- Support for reading Cursor and Windsurf session history (currently stored in the editor's internal SQLite databases, with no documented format).
+- A presentation page on [ottosite](https://github.com/GuiOttoni/ottosite).
