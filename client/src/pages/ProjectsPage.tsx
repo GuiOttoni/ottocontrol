@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { LayoutGrid, List, Folder, File, ExternalLink, Code2, TerminalSquare } from "lucide-react";
+import { LayoutGrid, List, Folder, File, ExternalLink, Code2, TerminalSquare, FileText } from "lucide-react";
 import { apiProjects } from "../lib/apiProjects";
 import type { DetectedProject, ProjectType, TreeNode, Readme } from "../lib/apiProjects";
 import Modal from "../components/Modal";
+import InstructionsEditor from "../components/InstructionsEditor";
 
 const TYPE_BADGE: Record<ProjectType, string> = {
   frontend: "bg-sky-900/30 text-sky-400",
@@ -283,8 +284,9 @@ function ProjectDetailModal({ project, onClose }: { project: DetectedProject; on
   const [tree, setTree] = useState<TreeNode[] | null>(null);
   const [readme, setReadme] = useState<Readme>(null);
   const [readmeLoaded, setReadmeLoaded] = useState(false);
-  const [tab, setTab] = useState<"tree" | "readme">("tree");
+  const [tab, setTab] = useState<"tree" | "readme" | "instructions">("tree");
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [hasInstructions, setHasInstructions] = useState<boolean | null>(null);
 
   useEffect(() => {
     setTree(null);
@@ -292,6 +294,7 @@ function ProjectDetailModal({ project, onClose }: { project: DetectedProject; on
     setReadmeLoaded(false);
     setTab("tree");
     setActionStatus(null);
+    setHasInstructions(null);
     apiProjects.tree(project.path).then((res) => setTree(res.tree));
     apiProjects.readme(project.path).then((res) => {
       setReadme(res.readme);
@@ -343,6 +346,12 @@ function ProjectDetailModal({ project, onClose }: { project: DetectedProject; on
           >
             <TerminalSquare size={13} /> Abrir terminal
           </button>
+          <button
+            onClick={() => setTab("instructions")}
+            className="flex cursor-pointer items-center gap-1.5 rounded-md border border-border-bright bg-transparent px-3 py-1.5 text-xs font-medium text-text-primary transition-all hover:-translate-y-px hover:border-accent hover:text-accent"
+          >
+            <FileText size={13} /> {hasInstructions ? "Editar instruções" : "Adicionar instruções"}
+          </button>
           {project.remoteUrl && (
             <a
               href={project.remoteUrl}
@@ -373,6 +382,14 @@ function ProjectDetailModal({ project, onClose }: { project: DetectedProject; on
           >
             README
           </button>
+          <button
+            onClick={() => setTab("instructions")}
+            className={`cursor-pointer border-b-2 px-3 py-2 text-xs font-medium transition-colors ${
+              tab === "instructions" ? "border-accent text-accent" : "border-transparent text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            Instruções
+          </button>
         </div>
 
         <div className="max-h-96 overflow-y-auto rounded-md border border-border bg-bg-secondary p-3">
@@ -395,6 +412,9 @@ function ProjectDetailModal({ project, onClose }: { project: DetectedProject; on
                 </pre>
               )}
             </>
+          )}
+          {tab === "instructions" && (
+            <InstructionsEditor projectPath={project.path} onLoaded={setHasInstructions} />
           )}
         </div>
       </div>

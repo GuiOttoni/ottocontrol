@@ -1,14 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { truncate } from "./text-utils.js";
 
 const GEMINI_HOME = path.join(os.homedir(), ".gemini");
 const TMP_DIR = path.join(GEMINI_HOME, "tmp");
 const PROJECTS_FILE = path.join(GEMINI_HOME, "projects.json");
-
-function truncate(str, max) {
-  return str.length > max ? str.slice(0, max) + "\n… (truncado)" : str;
-}
 
 // `content` is usually a plain string, but user messages can carry the
 // native Gemini `Part[]` shape instead (e.g. `[{ text: "..." }]`).
@@ -96,7 +93,14 @@ export async function getDetail(dir, file) {
   const target = path.join(TMP_DIR, dir, "chats", file);
   if (!fs.existsSync(target)) return null;
 
-  const data = JSON.parse(fs.readFileSync(target, "utf8"));
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(target, "utf8"));
+  } catch {
+    // corrupt/unreadable session file — degrade to "not found" rather than
+    // throwing (matches how a missing file is already handled above).
+    return null;
+  }
   const turns = (data.messages ?? []).map((m) => {
     const parts = [{ kind: "text", text: extractContentText(m.content) }];
     for (const thought of m.thoughts ?? []) {

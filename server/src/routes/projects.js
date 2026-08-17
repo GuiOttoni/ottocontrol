@@ -4,6 +4,7 @@ import { scanWorkspace } from "../lib/scan.js";
 import { listProjects } from "../lib/projects.js";
 import { getProjectsFolder } from "../lib/config.js";
 import { buildTree, findReadme, openInVSCode, openTerminal } from "../lib/project-detail.js";
+import { asyncRoute } from "../lib/async-handler.js";
 
 const router = Router();
 
@@ -44,16 +45,22 @@ router.get("/readme", (req, res) => {
   res.json({ readme: findReadme(dir) });
 });
 
-router.post("/open-vscode", async (req, res) => {
-  const dir = requireValidDir(req, res);
-  if (!dir) return;
-  res.json(await openInVSCode(dir));
-});
+router.post(
+  "/open-vscode",
+  asyncRoute(async (req, res) => {
+    const dir = requireValidDir(req, res);
+    if (!dir) return;
+    res.json(await openInVSCode(dir));
+  })
+);
 
-router.post("/open-terminal", async (req, res) => {
-  const dir = requireValidDir(req, res);
-  if (!dir) return;
-  res.json(await openTerminal(dir));
-});
+router.post(
+  "/open-terminal",
+  asyncRoute(async (req, res) => {
+    const dir = requireValidDir(req, res);
+    if (!dir) return;
+    res.json(await openTerminal(dir));
+  })
+);
 
 export default router;

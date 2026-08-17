@@ -46,6 +46,16 @@ if (fs.existsSync(path.join(clientDist, "index.html"))) {
   app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(clientDist, "index.html")));
 }
 
+// Catches both synchronous throws (Express 4 already funnels these here on
+// its own) and, via routes wrapped in asyncRoute(), rejected promises from
+// async handlers — so a bad request degrades to a clean JSON 500 instead of
+// an unstyled HTML error page or (for the async case) a hung connection.
+app.use((err, req, res, next) => {
+  console.error("[ottocontrol] request error:", err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: err?.message || "internal error" });
+});
+
 const PORT = process.env.PORT || 4310;
 const httpServer = app.listen(PORT, () => console.log(`ottocontrol server on http://localhost:${PORT}`));
 attachTerminalServer(httpServer);

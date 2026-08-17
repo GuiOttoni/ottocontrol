@@ -2,13 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import readline from "node:readline";
+import { truncate } from "./text-utils.js";
 
 const COPILOT_HOME = process.env.COPILOT_HOME || path.join(os.homedir(), ".copilot");
 const SESSION_STATE_DIR = path.join(COPILOT_HOME, "session-state");
-
-function truncate(str, max) {
-  return str.length > max ? str.slice(0, max) + "\n… (truncado)" : str;
-}
 
 // workspace.yaml is a flat `key: value` file (no nesting/arrays observed in
 // practice) — cheap to hand-parse without pulling in a YAML dependency.

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import readline from "node:readline";
+import { truncate } from "./text-utils.js";
 
 const CLAUDE_PROJECTS_DIR = path.join(os.homedir(), ".claude", "projects");
 
@@ -70,7 +71,12 @@ export async function listClaudeSessions() {
   const sessions = [];
   for (const dir of projectDirs) {
     const full = path.join(CLAUDE_PROJECTS_DIR, dir.name);
-    const files = fs.readdirSync(full).filter((f) => f.endsWith(".jsonl"));
+    let files;
+    try {
+      files = fs.readdirSync(full).filter((f) => f.endsWith(".jsonl"));
+    } catch {
+      continue; // unreadable project dir (permissions, race with deletion) — skip it
+    }
     for (const f of files) {
       try {
         const parsed = await parseSession(path.join(full, f));
@@ -83,10 +89,6 @@ export async function listClaudeSessions() {
 
   sessions.sort((a, b) => new Date(b.lastTs || 0) - new Date(a.lastTs || 0));
   return sessions;
-}
-
-function truncate(str, max) {
-  return str.length > max ? str.slice(0, max) + "\n… (truncado)" : str;
 }
 
 // Flattens one message's `content` (a string, or an array of

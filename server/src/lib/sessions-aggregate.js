@@ -18,11 +18,23 @@ function adaptClaude(sessions) {
   }));
 }
 
+// Isolates one provider's failure so a bug/corruption in one tool's session
+// store (e.g. an unreadable directory) can't take down the whole unified
+// list — the other providers' sessions still come back.
+async function safeList(label, promise) {
+  try {
+    return await promise;
+  } catch (err) {
+    console.error(`[ottocontrol] failed to list ${label} sessions:`, err);
+    return [];
+  }
+}
+
 export async function listAllSessions() {
   const [claude, copilot, gemini] = await Promise.all([
-    listClaudeSessions().then(adaptClaude),
-    listCopilotSessions(),
-    listGeminiSessions(),
+    safeList("claude", listClaudeSessions().then(adaptClaude)),
+    safeList("copilot", listCopilotSessions()),
+    safeList("gemini", listGeminiSessions()),
   ]);
 
   const sessions = [...claude, ...copilot, ...gemini];

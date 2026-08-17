@@ -1,4 +1,5 @@
 import { Router } from "express";
+import fs from "node:fs";
 import { TOOLS } from "../lib/tools.js";
 import { readCanonical, writeCanonical, driftReport } from "../lib/sync.js";
 import { listGlobalConfig, writeGlobalConfigFile, listSupportedAgents } from "../lib/global-instructions.js";
@@ -39,6 +40,9 @@ router.put("/", (req, res) => {
   const { projectRoot, content, overwriteForeign } = req.body ?? {};
   if (!projectRoot || typeof content !== "string") {
     return res.status(400).json({ error: "body requires { projectRoot, content }" });
+  }
+  if (!fs.existsSync(projectRoot) || !fs.statSync(projectRoot).isDirectory()) {
+    return res.status(404).json({ error: "projectRoot not found" });
   }
   const results = writeCanonical(projectRoot, content, overwriteForeign ?? []);
   res.json({ ok: true, synced: results });

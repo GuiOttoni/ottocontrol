@@ -40,7 +40,7 @@ function runPowerShell(script, timeout = 15000) {
     fs.writeFileSync(tmpFile, script, "utf8");
     exec(
       `powershell -NoProfile -ExecutionPolicy Bypass -File "${tmpFile}"`,
-      { maxBuffer: 20 * 1024 * 1024, timeout },
+      { maxBuffer: 20 * 1024 * 1024, timeout, windowsHide: true },
       (err, stdout) => {
         fs.unlink(tmpFile, () => {});
         if (err) return resolve(null);
@@ -148,7 +148,7 @@ export function getDockerContainerStats() {
   return new Promise((resolve) => {
     exec(
       'docker stats --no-stream --format "{{json .}}"',
-      { timeout: 8000, maxBuffer: 5 * 1024 * 1024 },
+      { timeout: 8000, maxBuffer: 5 * 1024 * 1024, windowsHide: true },
       (err, stdout) => {
         if (err || !stdout) return resolve({ available: false, containers: [] });
         try {

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import { Info, ExternalLink } from "lucide-react";
+import { Info, ExternalLink, Plus, Search } from "lucide-react";
 import { api } from "../lib/api";
-import type { AgentGlobalConfig, MirrorStatus, Project, SupportedAgent } from "../lib/api";
+import type { AgentGlobalConfig, Project, SupportedAgent } from "../lib/api";
+import { apiProjects } from "../lib/apiProjects";
+import type { DetectedProject } from "../lib/apiProjects";
 import Modal from "../components/Modal";
+import InstructionsEditor from "../components/InstructionsEditor";
 
 export default function InstructionsPage() {
   const [view, setView] = useState<"project" | "global">("project");
@@ -39,14 +42,13 @@ export default function InstructionsPage() {
   );
 }
 
+type SimpleProject = { name: string; path: string };
+
 function ProjectInstructions() {
   const [root, setRoot] = useState("F:/projetos");
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selected, setSelected] = useState<Project | null>(null);
-  const [content, setContent] = useState("");
-  const [mirrors, setMirrors] = useState<MirrorStatus[]>([]);
-  const [confirmedForeign, setConfirmedForeign] = useState<Set<string>>(new Set());
-  const [status, setStatus] = useState<string | null>(null);
+  const [selected, setSelected] = useState<SimpleProject | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   async function scan() {
     const res = await api.scan(root);
@@ -57,37 +59,8 @@ function ProjectInstructions() {
     scan();
   }, []);
 
-  async function openProject(p: Project) {
+  function openProject(p: SimpleProject) {
     setSelected(p);
-    setStatus(null);
-    setConfirmedForeign(new Set());
-    const res = await api.instructions(p.path);
-    setContent(res.canonical.content);
-    setMirrors(res.mirrors);
-  }
-
-  async function save() {
-    if (!selected) return;
-    setStatus("Salvando e sincronizando...");
-    const result = await api.saveInstructions(selected.path, content, [...confirmedForeign]);
-    const res = await api.instructions(selected.path);
-    setMirrors(res.mirrors);
-
-    const skipped = result.synced.filter((s) => !s.written);
-    setStatus(
-      skipped.length === 0
-        ? "Sincronizado com sucesso."
-        : `Sincronizado. ${skipped.length} arquivo(s) com conteúdo próprio NÃO foram sobrescritos — marque abaixo para autorizar.`
-    );
-  }
-
-  function toggleForeign(toolId: string) {
-    setConfirmedForeign((prev) => {
-      const next = new Set(prev);
-      if (next.has(toolId)) next.delete(toolId);
-      else next.add(toolId);
-      return next;
-    });
   }
 
   return (
@@ -97,13 +70,20 @@ function ProjectInstructions() {
           <input
             value={root}
             onChange={(e) => setRoot(e.target.value)}
-            className="flex-1 rounded-md border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none focus:border-accent"
+            className="w-0 min-w-0 flex-1 rounded-md border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none focus:border-accent"
           />
           <button
             onClick={scan}
-            className="cursor-pointer rounded-md border border-border-bright bg-transparent px-3 py-2 text-sm font-medium text-text-primary transition-all hover:-translate-y-px hover:border-accent hover:text-accent hover:shadow-[0_0_12px_var(--accent-glow)]"
+            className="shrink-0 cursor-pointer rounded-md border border-border-bright bg-transparent px-3 py-2 text-sm font-medium text-text-primary transition-all hover:-translate-y-px hover:border-accent hover:text-accent hover:shadow-[0_0_12px_var(--accent-glow)]"
           >
             Escanear
+          </button>
+          <button
+            onClick={() => setPickerOpen(true)}
+            title="Adicionar instruções a um projeto"
+            className="flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-border-bright bg-transparent px-2.5 py-2 text-sm font-medium text-text-primary transition-all hover:-translate-y-px hover:border-accent hover:text-accent hover:shadow-[0_0_12px_var(--accent-glow)]"
+          >
+            <Plus size={16} />
           </button>
         </div>
         <ul className="m-0 list-none p-0">
@@ -134,98 +114,117 @@ function ProjectInstructions() {
       <div className="flex-1 overflow-y-auto px-8 py-6">
         {!selected && <p className="text-sm text-text-secondary">Selecione um projeto à esquerda.</p>}
         {selected && (
-          <>
-            <h2 className="m-0 text-xl font-bold text-text-primary">{selected.name}</h2>
-            <p className="-mt-2 mb-4 text-xs text-text-tertiary">{selected.path}</p>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Conteúdo canônico (AGENTS.md)..."
-              rows={16}
-              className="w-full resize-y rounded-md border border-border bg-bg-secondary p-3 font-mono text-sm text-text-primary outline-none focus:border-accent"
-            />
-            <div className="my-4 flex items-center gap-4">
-              <button
-                onClick={save}
-                className="cursor-pointer rounded-md border border-accent-dim bg-accent-glow px-4 py-2 text-sm font-medium text-accent transition-all hover:-translate-y-px hover:shadow-[0_0_12px_var(--accent-glow)]"
-              >
-                Salvar e sincronizar em todas as ferramentas
-              </button>
-              {status && <span className="text-sm text-accent">{status}</span>}
-            </div>
-
-            <h3 className="mb-1 text-base font-bold text-text-primary">Status por ferramenta</h3>
-            <p className="mb-3 text-sm text-text-secondary">
-              Arquivos marcados como <strong className="text-text-primary">conteúdo próprio</strong>{" "}
-              já tinham texto que não veio de um sync anterior — não são sobrescritos a menos que
-              você marque a caixa e salve de novo.
-            </p>
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr>
-                  <th className="border-b border-border px-3 py-2 text-left font-medium text-text-secondary">
-                    Ferramenta
-                  </th>
-                  <th className="border-b border-border px-3 py-2 text-left font-medium text-text-secondary">
-                    Arquivo
-                  </th>
-                  <th className="border-b border-border px-3 py-2 text-left font-medium text-text-secondary">
-                    Estado
-                  </th>
-                  <th className="border-b border-border px-3 py-2 text-left font-medium text-text-secondary">
-                    Sobrescrever
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {mirrors.map((m) => (
-                  <tr key={m.tool}>
-                    <td className="border-b border-border px-3 py-2 text-text-primary">{m.name}</td>
-                    <td className="border-b border-border px-3 py-2">
-                      <code>{m.file}</code>
-                    </td>
-                    <td className="border-b border-border px-3 py-2">
-                      {m.status === "missing" && (
-                        <span className="rounded-full bg-red-900/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-red-400">
-                          ausente
-                        </span>
-                      )}
-                      {m.status === "in-sync" && (
-                        <span className="rounded-full bg-emerald-900/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
-                          sincronizado
-                        </span>
-                      )}
-                      {m.status === "drift" && (
-                        <span className="rounded-full bg-gold-glow px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
-                          divergente
-                        </span>
-                      )}
-                      {m.status === "foreign" && (
-                        <span className="rounded-full bg-accent-glow px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">
-                          conteúdo próprio
-                        </span>
-                      )}
-                    </td>
-                    <td className="border-b border-border px-3 py-2">
-                      {m.status === "foreign" && (
-                        <label className="flex cursor-pointer items-center gap-2 text-xs text-red-400">
-                          <input
-                            type="checkbox"
-                            checked={confirmedForeign.has(m.tool)}
-                            onChange={() => toggleForeign(m.tool)}
-                          />
-                          autorizar
-                        </label>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
+          <InstructionsEditor
+            key={selected.path}
+            projectPath={selected.path}
+            projectName={selected.name}
+          />
         )}
       </div>
+
+      <ProjectPickerModal
+        open={pickerOpen}
+        defaultRoot={root}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(p) => {
+          setSelected({ name: p.name, path: p.path });
+          setPickerOpen(false);
+        }}
+      />
     </div>
+  );
+}
+
+function ProjectPickerModal({
+  open,
+  defaultRoot,
+  onClose,
+  onSelect,
+}: {
+  open: boolean;
+  defaultRoot: string;
+  onClose: () => void;
+  onSelect: (p: DetectedProject) => void;
+}) {
+  const [root, setRoot] = useState(defaultRoot);
+  const [projects, setProjects] = useState<DetectedProject[]>([]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function load(r?: string) {
+    setLoading(true);
+    try {
+      const res = await apiProjects.list(r || undefined);
+      setProjects(res.projects);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    setRoot(defaultRoot);
+    setQuery("");
+    load(defaultRoot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const filtered = projects.filter(
+    (p) =>
+      p.name.toLowerCase().includes(query.toLowerCase()) ||
+      p.path.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Adicionar instruções a um projeto"
+      subtitle="Escolha qualquer projeto detectado, mesmo sem AGENTS.md ainda"
+      widthClass="max-w-lg"
+    >
+      <div className="flex flex-col gap-3 px-5 py-4">
+        <div className="flex gap-2">
+          <input
+            value={root}
+            onChange={(e) => setRoot(e.target.value)}
+            className="flex-1 rounded-md border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary outline-none focus:border-accent"
+          />
+          <button
+            onClick={() => load(root)}
+            className="cursor-pointer rounded-md border border-border-bright bg-transparent px-3 py-2 text-sm font-medium text-text-primary transition-all hover:-translate-y-px hover:border-accent hover:text-accent"
+          >
+            Escanear
+          </button>
+        </div>
+        <div className="relative">
+          <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar projeto..."
+            className="w-full rounded-md border border-border bg-bg-secondary py-2 pl-8 pr-3 text-sm text-text-primary outline-none focus:border-accent"
+          />
+        </div>
+        <ul className="m-0 max-h-72 list-none overflow-y-auto rounded-md border border-border p-0">
+          {loading && <li className="px-3 py-3 text-sm text-text-secondary">Escaneando...</li>}
+          {!loading &&
+            filtered.map((p) => (
+              <li
+                key={p.path}
+                onClick={() => onSelect(p)}
+                className="flex cursor-pointer flex-col gap-0.5 border-b border-border px-3 py-2 last:border-b-0 hover:bg-bg-card-hover"
+              >
+                <strong className="text-sm font-medium text-text-primary">{p.name}</strong>
+                <span className="truncate text-xs text-text-tertiary">{p.path}</span>
+              </li>
+            ))}
+          {!loading && filtered.length === 0 && (
+            <li className="px-3 py-3 text-sm text-text-secondary">Nenhum projeto encontrado.</li>
+          )}
+        </ul>
+      </div>
+    </Modal>
   );
 }
 

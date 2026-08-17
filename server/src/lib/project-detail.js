@@ -74,7 +74,7 @@ export function findReadme(dir) {
 
 export function openInVSCode(dir) {
   return new Promise((resolve) => {
-    exec(`code "${dir}"`, (err) => {
+    exec(`code "${dir}"`, { windowsHide: true }, (err) => {
       if (err) resolve({ ok: false, error: "Comando 'code' não encontrado no PATH." });
       else resolve({ ok: true });
     });
@@ -84,10 +84,16 @@ export function openInVSCode(dir) {
 export function openTerminal(dir) {
   return new Promise((resolve) => {
     try {
-      const child = spawn("cmd.exe", ["/c", "start", '""', "cmd.exe", "/k", `cd /d "${dir}"`], {
+      // `cwd` sets the working directory natively via CreateProcess, so the
+      // target path never gets embedded into a quoted command string — the
+      // previous version built `cd /d "${dir}"` as one array element, which
+      // spawn() re-quotes as a whole, producing nested quotes cmd.exe can't
+      // parse ("syntax of the filename... is incorrect").
+      const child = spawn("cmd.exe", ["/c", "start", "", "cmd.exe", "/k"], {
         detached: true,
         stdio: "ignore",
         windowsHide: false,
+        cwd: dir,
       });
       child.unref();
       resolve({ ok: true });
