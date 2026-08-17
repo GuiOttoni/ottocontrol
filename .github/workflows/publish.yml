@@ -60,11 +60,12 @@ jobs:
         working-directory: package
         run: npm run build
 
+      # Trusted Publisher (OIDC) configurado no npmjs.com para este pacote —
+      # nenhum token/secret necessário, npm troca o id-token do job pela
+      # autenticação automaticamente.
       - name: Publish to npm
         working-directory: package
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Summary
         working-directory: package
