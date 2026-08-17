@@ -1,4 +1,4 @@
-import { exec } from "node:child_process";
+import { spawn } from "node:child_process";
 import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
@@ -34,20 +34,50 @@ ConvertTo-Json -InputObject @($result) -Compress
 `.trim();
 }
 
-function runPowerShell(script, timeout = 15000) {
+// Runs a command via spawn() with no shell layer in between (unlike
+// exec(), which always wraps the command in `cmd.exe /c "..."` on
+// Windows) — that extra cmd.exe hop is what let a console window flash
+// past `windowsHide: true` in practice. Spawning the target binary
+// directly, with `windowsHide` on that single process, is the
+// reliable way to keep everything invisible.
+function runCommand(file, args, { timeout = 15000, maxBuffer = 20 * 1024 * 1024 } = {}) {
   return new Promise((resolve) => {
-    const tmpFile = path.join(os.tmpdir(), `ottocontrol-ps-${Date.now()}-${Math.random().toString(36).slice(2)}.ps1`);
-    fs.writeFileSync(tmpFile, script, "utf8");
-    exec(
-      `powershell -NoProfile -ExecutionPolicy Bypass -File "${tmpFile}"`,
-      { maxBuffer: 20 * 1024 * 1024, timeout, windowsHide: true },
-      (err, stdout) => {
-        fs.unlink(tmpFile, () => {});
-        if (err) return resolve(null);
-        resolve(stdout);
-      }
-    );
+    let child;
+    try {
+      child = spawn(file, args, { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+    } catch {
+      return resolve(null);
+    }
+
+    let stdout = "";
+    let settled = false;
+    const done = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+
+    const timer = setTimeout(() => {
+      child.kill();
+      done(null);
+    }, timeout);
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+      if (stdout.length > maxBuffer) child.kill();
+    });
+    child.on("error", () => done(null));
+    child.on("close", (code) => done(code === 0 ? stdout : null));
   });
+}
+
+function runPowerShell(script, timeout = 15000) {
+  const tmpFile = path.join(os.tmpdir(), `ottocontrol-ps-${Date.now()}-${Math.random().toString(36).slice(2)}.ps1`);
+  fs.writeFileSync(tmpFile, script, "utf8");
+  return runCommand("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tmpFile], {
+    timeout,
+  }).finally(() => fs.unlink(tmpFile, () => {}));
 }
 
 // Best-effort classification from process name + command line. Order
@@ -144,33 +174,30 @@ export function getSelfUsage() {
   return { pid: process.pid, rssBytes: mem.rss, heapUsedBytes: mem.heapUsed };
 }
 
-export function getDockerContainerStats() {
-  return new Promise((resolve) => {
-    exec(
-      'docker stats --no-stream --format "{{json .}}"',
-      { timeout: 8000, maxBuffer: 5 * 1024 * 1024, windowsHide: true },
-      (err, stdout) => {
-        if (err || !stdout) return resolve({ available: false, containers: [] });
-        try {
-          const containers = stdout
-            .trim()
-            .split("\n")
-            .filter(Boolean)
-            .map((line) => {
-              const c = JSON.parse(line);
-              return {
-                id: c.ID,
-                name: c.Name,
-                cpuPercent: parseFloat(c.CPUPerc) || 0,
-                memUsage: c.MemUsage,
-                memPercent: parseFloat(c.MemPerc) || 0,
-              };
-            });
-          resolve({ available: true, containers });
-        } catch {
-          resolve({ available: false, containers: [] });
-        }
-      }
-    );
+export async function getDockerContainerStats() {
+  const stdout = await runCommand("docker", ["stats", "--no-stream", "--format", "{{json .}}"], {
+    timeout: 8000,
+    maxBuffer: 5 * 1024 * 1024,
   });
+  if (!stdout) return { available: false, containers: [] };
+
+  try {
+    const containers = stdout
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const c = JSON.parse(line);
+        return {
+          id: c.ID,
+          name: c.Name,
+          cpuPercent: parseFloat(c.CPUPerc) || 0,
+          memUsage: c.MemUsage,
+          memPercent: parseFloat(c.MemPerc) || 0,
+        };
+      });
+    return { available: true, containers };
+  } catch {
+    return { available: false, containers: [] };
+  }
 }
